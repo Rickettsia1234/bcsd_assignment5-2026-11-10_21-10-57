@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class EnemySpawner : MonoBehaviour
 {
@@ -9,6 +10,10 @@ public class EnemySpawner : MonoBehaviour
     private float spawnTime;
     [SerializeField]
     private Transform[] wayPoints;
+
+    private List<Enemy> enemyList = new List<Enemy>();
+
+    public List<Enemy> EnemyList => enemyList;
 
     private void Awake()
     {
@@ -22,9 +27,16 @@ public class EnemySpawner : MonoBehaviour
             GameObject clone = Instantiate(enemyPrefab);
             Enemy enemy = clone.GetComponent<Enemy>();
 
-            enemy.Setup(wayPoints);
+            enemy.Setup(this, wayPoints);
+            enemyList.Add(enemy);
 
             yield return new WaitForSeconds(spawnTime);
         }
+    }
+
+    public void DestroyEnemy(Enemy enemy)
+    {
+        enemyList.Remove(enemy);
+        Destroy(enemy.gameObject);
     }
 }

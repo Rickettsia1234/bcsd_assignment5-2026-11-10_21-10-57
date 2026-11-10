@@ -6,12 +6,14 @@ public class Enemy : MonoBehaviour
     [SerializeField]
     private float timeOffset = 1f;
 
+    private EnemySpawner enemySpawner;
     private Transform[] wayPoints;
     private int wayPointCount;
     private int currentIndex = 0;
 
-    public void Setup(Transform[] wayPoints)
+    public void Setup(EnemySpawner enemySpawner, Transform[] wayPoints)
     {
+        this.enemySpawner = enemySpawner;
         wayPointCount = wayPoints.Length;
         this.wayPoints = new Transform[wayPointCount];
         this.wayPoints = wayPoints;
@@ -39,7 +41,7 @@ public class Enemy : MonoBehaviour
             }
             else
             {
-                Destroy(gameObject);
+                enemySpawner.DestroyEnemy(this);
             }
         }
     }
