@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 4497714120438357506}
   - component: {fileID: 1179090851376847117}
   - component: {fileID: -2574395928119939022}
+  - component: {fileID: 7866668856370482077}
   m_Layer: 0
   m_Name: Projectile
   m_TagString: Untagged
@@ -125,6 +126,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 480d97a77cd2b9d49b56be5f69a1303a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Projectile
+--- !u!114 &7866668856370482077
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3370685713868530842}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fdb73e2d26c7f0c47b678af6cd3bc13c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MovementTransform
+  moveSpeed: 15
 --- !u!1 &4363512212275845665
 GameObject:
   m_ObjectHideFlags: 0

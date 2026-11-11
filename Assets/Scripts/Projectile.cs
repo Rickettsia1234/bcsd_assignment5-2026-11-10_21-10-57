@@ -2,21 +2,23 @@ using UnityEngine;
 
 public class Projectile : MonoBehaviour
 {
-    private Movement2D movement2D;
+    private MovementTransform movementTransform;
     private Transform target;
+    private float damage;
 
-    public void Setup(Transform target)
+    public void Setup(Transform target, float damage)
     {
-        movement2D = GetComponent<Movement2D>();
+        movementTransform = GetComponent<MovementTransform>();
         this.target = target;
+        this.damage = damage;
     }
 
     private void Update()
     {
-        if ( target != null )
+        if (target != null)
         {
             Vector3 direction = (target.position - transform.position).normalized;
-            movement2D.MoveTo(direction);
+            movementTransform.MoveTo(direction);
         }
         else
         {
@@ -26,16 +28,12 @@ public class Projectile : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if ( collision.CompareTag("Enemy") )
-        {
-            if ( collision.transform == target )
-            {
-                Enemy enemy = collision.GetComponent<Enemy>();
-                EnemySpawner enemySpawner = FindFirstObjectByType<EnemySpawner>();
+        if (!collision.CompareTag("Enemy")) return;
 
-                enemySpawner.DestroyEnemy(enemy);
-                Destroy(gameObject);
-            }
+        if (collision.transform == target)
+        {
+            collision.GetComponent<EnemyHP>().TakeDamage(damage);
+            Destroy(gameObject);
         }
     }
 }

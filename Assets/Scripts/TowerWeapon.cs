@@ -1,5 +1,7 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
+
+public enum TowerState { SearchTarget = 0, AttackToTarget }
 
 public class TowerWeapon : MonoBehaviour
 {
@@ -11,86 +13,89 @@ public class TowerWeapon : MonoBehaviour
     private float attackRate = 0.5f;
     [SerializeField]
     private float attackRange = 2.0f;
+    [SerializeField]
+    private float attackDamage = 1.0f;
+    [SerializeField]
+    private Transform targetTransform;
 
+    private TowerState towerState = TowerState.SearchTarget;
     private EnemySpawner enemySpawner;
-    private Transform attackTarget = null;
+
+    public float AttackRange => attackRange;
 
     public void Setup(EnemySpawner enemySpawner)
     {
         this.enemySpawner = enemySpawner;
-        StartCoroutine(nameof(ChangeTarget));
-        StartCoroutine(nameof(AttackToTarget));
+        ChangeState(TowerState.SearchTarget);
     }
 
-    private void Update()
+    public void ChangeState(TowerState newState)
     {
-        if ( attackTarget != null )
-        {
-            RotateToTarget();
-        }
+        StopCoroutine(towerState.ToString());
+        towerState = newState;
+        StartCoroutine(towerState.ToString());
     }
 
-    private IEnumerator ChangeTarget()
+    private IEnumerator SearchTarget()
     {
-        while ( true )
+        while (true)
         {
-            Transform closestTarget = SearchClosestTarget();
-
-            if ( closestTarget != null )
+            float closestDistSqr = Mathf.Infinity;
+            for (int i = 0; i < enemySpawner.EnemyList.Count; ++i)
             {
-                attackTarget = closestTarget;
+                float distance = Vector3.Distance(enemySpawner.EnemyList[i].transform.position, transform.position);
+                if (distance <= attackRange && distance < closestDistSqr)
+                {
+                    closestDistSqr = distance;
+                    targetTransform = enemySpawner.EnemyList[i].transform;
+                }
             }
 
-            yield return new WaitForSeconds(0.1f);
+            if (targetTransform != null)
+            {
+                ChangeState(TowerState.AttackToTarget);
+            }
+
+            yield return null;
         }
     }
 
     private IEnumerator AttackToTarget()
     {
-        while ( true )
+        while (true)
         {
-            if ( attackTarget != null )
+            if (targetTransform == null)
             {
-                SpawnProjectile();
+                ChangeState(TowerState.SearchTarget);
+                break;
             }
+
+            float distance = Vector3.Distance(targetTransform.position, transform.position);
+            if (distance > attackRange)
+            {
+                targetTransform = null;
+                ChangeState(TowerState.SearchTarget);
+                break;
+            }
+
+            RotateToTarget();
 
             yield return new WaitForSeconds(attackRate);
+
+            SpawnProjectile();
         }
-    }
-
-    private Transform SearchClosestTarget()
-    {
-        float minDistance = Mathf.Infinity;
-        Transform closestTarget = null;
-
-        for ( int i = 0; i < enemySpawner.EnemyList.Count; i++ )
-        {
-            float distance = Vector3.Distance(transform.position, enemySpawner.EnemyList[i].transform.position);
-
-            if ( distance <= attackRange && distance < minDistance )
-            {
-                minDistance = distance;
-                closestTarget = enemySpawner.EnemyList[i].transform;
-            }
-        }
-
-        return closestTarget;
     }
 
     private void RotateToTarget()
     {
-        float dx = attackTarget.position.x - transform.position.x;
-        float dy = attackTarget.position.y - transform.position.y;
-
-        float degree = Mathf.Atan2(dy, dx) * Mathf.Rad2Deg;
-
+        Vector3 dx = targetTransform.position - transform.position;
+        float degree = Mathf.Atan2(dx.y, dx.x) * Mathf.Rad2Deg;
         transform.rotation = Quaternion.Euler(0, 0, degree);
     }
 
     private void SpawnProjectile()
     {
         GameObject clone = Instantiate(projectilePrefab, spawnPoint.position, Quaternion.identity);
-
-        clone.GetComponent<Projectile>().Setup(attackTarget);
+        clone.GetComponent<Projectile>().Setup(targetTransform, attackDamage);
     }
 }

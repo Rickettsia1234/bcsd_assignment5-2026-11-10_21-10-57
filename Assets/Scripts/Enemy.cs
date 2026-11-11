@@ -1,62 +1,69 @@
-using UnityEngine;
 using System.Collections;
+using UnityEngine;
+
+public enum EnemyDestroyType { Kill = 0, Arrive }
 
 public class Enemy : MonoBehaviour
 {
     [SerializeField]
-    private float timeOffset = 1f;
+    private int gold = 10;
+    [SerializeField]
+    private Transform hudPoint;
+    [SerializeField]
+    private Transform rotator;
 
-    private EnemySpawner enemySpawner;
-    private Transform[] wayPoints;
-    private int wayPointCount;
+    private WayPoint[] wayPoints;
     private int currentIndex = 0;
+    private MovementTransform movementTransform;
+    private EnemySpawner enemySpawner;
 
-    public void Setup(EnemySpawner enemySpawner, Transform[] wayPoints)
+    public Transform HUDPoint => hudPoint;
+
+    public void Setup(EnemySpawner enemySpawner, WayPoint[] wayPoints)
     {
+        movementTransform = GetComponent<MovementTransform>();
         this.enemySpawner = enemySpawner;
-        wayPointCount = wayPoints.Length;
-        this.wayPoints = new Transform[wayPointCount];
         this.wayPoints = wayPoints;
 
         transform.position = wayPoints[currentIndex].position;
-        currentIndex++;
 
-        StartCoroutine(nameof(Process));
+        StartCoroutine("OnMove");
     }
 
-    private void Update()
+    private IEnumerator OnMove()
     {
-        transform.Rotate(Vector3.forward, 360 * Time.deltaTime);
-    }
+        NextMoveTo();
 
-    private IEnumerator Process()
-    {
-        while ( true )
+        while (true)
         {
-            yield return StartCoroutine(MoveToAB(transform.position, wayPoints[currentIndex].position));
+            rotator.Rotate(Vector3.forward * 10);
 
-            if ( currentIndex < wayPointCount - 1 )
+            if (Vector3.Distance(transform.position, wayPoints[currentIndex].position) < 0.02f * movementTransform.MoveSpeed)
             {
-                currentIndex++;
+                NextMoveTo();
             }
-            else
-            {
-                enemySpawner.DestroyEnemy(this);
-            }
-        }
-    }
-
-    private IEnumerator MoveToAB(Vector3 start, Vector3 end)
-    {
-        float percent = 0F;
-        float moveTime = Vector3.Distance(start, end) * timeOffset;
-
-        while ( percent < 1F )
-        {
-            percent += Time.deltaTime / moveTime;
-            transform.position = Vector3.Lerp(start, end, percent);
 
             yield return null;
         }
+    }
+
+    private void NextMoveTo()
+    {
+        if (currentIndex < wayPoints.Length - 1)
+        {
+            transform.position = wayPoints[currentIndex].position;
+            currentIndex++;
+            Vector3 direction = (wayPoints[currentIndex].position - transform.position).normalized;
+            movementTransform.MoveTo(direction);
+        }
+        else
+        {
+            OnDie(EnemyDestroyType.Arrive);
+        }
+    }
+
+    public void OnDie(EnemyDestroyType type)
+    {
+        enemySpawner.DestroyEnemy(type, this, gold);
     }
 }
