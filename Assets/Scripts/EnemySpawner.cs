@@ -5,13 +5,9 @@ using UnityEngine;
 public class EnemySpawner : MonoBehaviour
 {
     [SerializeField]
-    private GameObject enemyPrefab;
-    [SerializeField]
     private GameObject enemyHPPrefab;
     [SerializeField]
     private Transform hpUIParent;
-    [SerializeField]
-    private float spawnTime;
     [SerializeField]
     private Transform[] wayPoints;
     [SerializeField]
@@ -19,47 +15,45 @@ public class EnemySpawner : MonoBehaviour
     [SerializeField]
     private PlayerGold playerGold;
 
+    private Wave currentWave;
     private List<Enemy> enemyList;
+    private int currentEnemyCount;
 
     public List<Enemy> EnemyList => enemyList;
+    public int CurrentEnemyCount => currentEnemyCount;
+    public int MaxEnemyCount => currentWave.maxEnemyCount;
 
     private void Awake()
     {
         enemyList = new List<Enemy>();
-        StartCoroutine("SpawnEnemy");
+    }
+
+    public void StartWave(Wave wave)
+    {
+        currentWave = wave;
+        currentEnemyCount = currentWave.maxEnemyCount;
+        StartCoroutine(nameof(SpawnEnemy));
     }
 
     private IEnumerator SpawnEnemy()
     {
-        while (true)
+        int spawnEnemyCount = 0;
+
+        while (spawnEnemyCount < currentWave.maxEnemyCount)
         {
-            GameObject clone = Instantiate(enemyPrefab);
+            int enemyIndex = Random.Range(0, currentWave.enemyPrefabs.Length);
+            GameObject clone = Instantiate(currentWave.enemyPrefabs[enemyIndex]);
             Enemy enemy = clone.GetComponent<Enemy>();
 
-            WayPoint[] points = new WayPoint[wayPoints.Length];
-            for (int i = 0; i < wayPoints.Length; i++)
-            {
-                points[i] = wayPoints[i].GetComponent<WayPoint>();
-            }
-
-            enemy.Setup(this, points);
+            enemy.Setup(this, wayPoints);
             enemyList.Add(enemy);
 
-            SpawnEnemyHPSlider(clone);
+            SpawnEnemyHP(clone);
 
-            yield return new WaitForSeconds(spawnTime);
+            spawnEnemyCount++;
+
+            yield return new WaitForSeconds(currentWave.spawnTime);
         }
-    }
-
-    private void SpawnEnemyHPSlider(GameObject enemyObject)
-    {
-        GameObject sliderClone = Instantiate(enemyHPPrefab, hpUIParent);
-        
-        Enemy enemy = enemyObject.GetComponent<Enemy>();
-        EnemyHP enemyHP = enemyObject.GetComponent<EnemyHP>();
-
-        sliderClone.GetComponent<FollowTargetUI>().Setup(enemy.HUDPoint);
-        sliderClone.GetComponent<EnemyHPViewer>().Setup(enemyHP);
     }
 
     public void DestroyEnemy(EnemyDestroyType type, Enemy enemy, int gold)
@@ -73,7 +67,21 @@ public class EnemySpawner : MonoBehaviour
             playerGold.CurrentGold += gold;
         }
 
+        currentEnemyCount--;
         enemyList.Remove(enemy);
         Destroy(enemy.gameObject);
+    }
+
+    private void SpawnEnemyHP(GameObject enemyObject)
+    {
+        GameObject sliderClone = Instantiate(enemyHPPrefab);
+        sliderClone.transform.SetParent(hpUIParent);
+        sliderClone.transform.localScale = Vector3.one;
+
+        Enemy enemy = enemyObject.GetComponent<Enemy>();
+        EnemyHP enemyHP = enemyObject.GetComponent<EnemyHP>();
+
+        sliderClone.GetComponent<FollowTargetUI>().Setup(enemy.HUDPoint);
+        sliderClone.GetComponent<EnemyHPViewer>().Setup(enemyHP);
     }
 }

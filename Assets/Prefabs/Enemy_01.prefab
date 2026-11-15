@@ -134,7 +134,6 @@ GameObject:
   - component: {fileID: 1776813181097906910}
   - component: {fileID: 2970929359859829380}
   - component: {fileID: 4767096289566283883}
-  - component: {fileID: 8993373611844812257}
   m_Layer: 0
   m_Name: Enemy_01
   m_TagString: Enemy
@@ -171,9 +170,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d81fdb2f57aec2243a7220b693811263, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Enemy
-  gold: 10
+  timeOffset: 1
   hudPoint: {fileID: 4224189460023083843}
   rotator: {fileID: 8612923423654160500}
+  gold: 10
 --- !u!58 &2970929359859829380
 CircleCollider2D:
   m_ObjectHideFlags: 0
@@ -223,16 +223,3 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHP
   maxHP: 5
---- !u!114 &8993373611844812257
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8003692693738738397}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fdb73e2d26c7f0c47b678af6cd3bc13c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MovementTransform
-  moveSpeed: 1

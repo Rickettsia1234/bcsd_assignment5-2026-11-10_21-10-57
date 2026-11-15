@@ -3,11 +3,15 @@ using UnityEngine;
 public class Movement2D : MonoBehaviour
 {
     [SerializeField]
-    private float moveSpeed = 0f;
+    private float moveSpeed = 0.0f;
     [SerializeField]
     private Vector3 moveDirection = Vector3.zero;
 
-    public float MoveSpeed => moveSpeed;
+    public float MoveSpeed
+    {
+        set => moveSpeed = Mathf.Max(0, value);
+        get => moveSpeed;
+    }
 
     private void Update()
     {

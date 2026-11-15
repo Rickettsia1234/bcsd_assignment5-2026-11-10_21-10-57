@@ -2,13 +2,13 @@ using UnityEngine;
 
 public class Projectile : MonoBehaviour
 {
-    private MovementTransform movementTransform;
+    private Movement2D movement2D;
     private Transform target;
     private float damage;
 
     public void Setup(Transform target, float damage)
     {
-        movementTransform = GetComponent<MovementTransform>();
+        movement2D = GetComponent<Movement2D>();
         this.target = target;
         this.damage = damage;
     }
@@ -18,7 +18,7 @@ public class Projectile : MonoBehaviour
         if (target != null)
         {
             Vector3 direction = (target.position - transform.position).normalized;
-            movementTransform.MoveTo(direction);
+            movement2D.MoveTo(direction);
         }
         else
         {
@@ -29,11 +29,9 @@ public class Projectile : MonoBehaviour
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if (!collision.CompareTag("Enemy")) return;
+        if (collision.transform != target) return;
 
-        if (collision.transform == target)
-        {
-            collision.GetComponent<EnemyHP>().TakeDamage(damage);
-            Destroy(gameObject);
-        }
+        collision.GetComponent<EnemyHP>().TakeDamage(damage);
+        Destroy(gameObject);
     }
 }
