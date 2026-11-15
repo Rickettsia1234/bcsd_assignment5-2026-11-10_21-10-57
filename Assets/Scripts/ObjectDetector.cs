@@ -33,7 +33,7 @@ public class ObjectDetector : MonoBehaviour
             {
                 if ( hit.transform.CompareTag("Tile") )
                 {
-                    towerSpawner.SpawnTower(hit.transform);
+                    towerSpawner.TrySpawnTower(hit.transform);
                 }
                 else if ( hit.transform.CompareTag("Tower") )
                 {

@@ -1,43 +1,48 @@
-using System.Collections;
 using UnityEngine;
+using System.Collections;
 
-public enum TowerState { SearchTarget = 0, AttackToTarget }
+public enum WeaponState { SearchClosestTarget = 0, AttackToTarget }
 
 public class TowerWeapon : MonoBehaviour
 {
     [SerializeField]
-    private GameObject      projectilePrefab;
+    private TowerTemplateSO towerTemplate;
     [SerializeField]
-    private Transform       spawnPoint;
+    private Transform spawnPoint;
     [SerializeField]
-    private float           attackRate = 0.5f;
-    [SerializeField]
-    private float           attackRange = 2.0f;
-    [SerializeField]
-    private float           attackDamage = 1;
+    private GameObject projectilePrefab;
 
-    private int             level = 1;
-    private TowerState      towerState = TowerState.SearchTarget;
-    private Transform       attackTarget = null;
-    private EnemySpawner    enemySpawner;
+    private EnemySpawner enemySpawner;
+    private SpriteRenderer spriteRenderer;
+    private PlayerGold playerGold;
+    private Transform attackTarget = null;
+    private Tile ownerTile;
+    private WeaponState weaponState;
+    private int level;
 
-    public float Damage => attackDamage;
-    public float Rate   => attackRate;
-    public float Range  => attackRange;
-    public int   Level  => level;
+    public Sprite TowerSprite => towerTemplate.weapon[level].sprite;
+    public float Damage => towerTemplate.weapon[level].damage;
+    public float Rate => towerTemplate.weapon[level].rate;
+    public float Range => towerTemplate.weapon[level].range;
+    public int Level => level + 1;
+    public int MaxLevel => towerTemplate.weapon.Length;
 
-    public void Setup(EnemySpawner enemySpawner)
+    public void Setup(EnemySpawner enemySpawner, PlayerGold playerGold, Tile ownerTile)
     {
-        this.enemySpawner = enemySpawner;
+        spriteRenderer = GetComponentInChildren<SpriteRenderer>();
 
-        ChangeState(TowerState.SearchTarget);
+        this.enemySpawner = enemySpawner;
+        this.playerGold = playerGold;
+        this.ownerTile = ownerTile;
+
+        ChangeState(WeaponState.SearchClosestTarget);
     }
 
-    public void ChangeState(TowerState newState)
+    public void ChangeState(WeaponState newState)
     {
-        StopCoroutine(towerState.ToString());
-        towerState = newState;
-        StartCoroutine(towerState.ToString());
+        StopCoroutine(weaponState.ToString());
+        weaponState = newState;
+        StartCoroutine(weaponState.ToString());
     }
 
     private void Update()
@@ -56,15 +61,16 @@ public class TowerWeapon : MonoBehaviour
         transform.rotation = Quaternion.Euler(0, 0, degree);
     }
 
-    private IEnumerator SearchTarget()
+    private IEnumerator SearchClosestTarget()
     {
+        float closestDistSqr = Mathf.Infinity;
+
         while ( true )
         {
-            float closestDistSqr = Mathf.Infinity;
             for ( int i = 0; i < enemySpawner.EnemyList.Count; ++ i )
             {
                 float distance = Vector3.Distance(enemySpawner.EnemyList[i].transform.position, transform.position);
-                if ( distance <= attackRange && distance <= closestDistSqr )
+                if ( distance <= towerTemplate.weapon[level].range && distance <= closestDistSqr )
                 {
                     closestDistSqr = distance;
                     attackTarget = enemySpawner.EnemyList[i].transform;
@@ -73,7 +79,7 @@ public class TowerWeapon : MonoBehaviour
 
             if ( attackTarget != null )
             {
-                ChangeState(TowerState.AttackToTarget);
+                ChangeState(WeaponState.AttackToTarget);
             }
 
             yield return null;
@@ -86,19 +92,19 @@ public class TowerWeapon : MonoBehaviour
         {
             if ( attackTarget == null )
             {
-                ChangeState(TowerState.SearchTarget);
+                ChangeState(WeaponState.SearchClosestTarget);
                 break;
             }
 
             float distance = Vector3.Distance(attackTarget.position, transform.position);
-            if ( distance > attackRange )
+            if ( distance > towerTemplate.weapon[level].range )
             {
                 attackTarget = null;
-                ChangeState(TowerState.SearchTarget);
+                ChangeState(WeaponState.SearchClosestTarget);
                 break;
             }
 
-            yield return new WaitForSeconds(attackRate);
+            yield return new WaitForSeconds(towerTemplate.weapon[level].rate);
 
             SpawnProjectile();
         }
@@ -107,6 +113,27 @@ public class TowerWeapon : MonoBehaviour
     private void SpawnProjectile()
     {
         GameObject clone = Instantiate(projectilePrefab, spawnPoint.position, Quaternion.identity);
-        clone.GetComponent<Projectile>().Setup(attackTarget, attackDamage);
+        clone.GetComponent<Projectile>().Setup(attackTarget, towerTemplate.weapon[level].damage);
+    }
+
+    public bool Upgrade()
+    {
+        if ( playerGold.CurrentGold < towerTemplate.weapon[level+1].cost )
+        {
+            return false;
+        }
+
+        level ++;
+        spriteRenderer.sprite = TowerSprite;
+        playerGold.CurrentGold -= towerTemplate.weapon[level].cost;
+
+        return true;
+    }
+
+    public void Sell()
+    {
+        playerGold.CurrentGold += towerTemplate.weapon[level].sell;
+        ownerTile.IsBuildTower = false;
+        Destroy(gameObject);
     }
 }

@@ -3,18 +3,19 @@ using UnityEngine;
 public class TowerSpawner : MonoBehaviour
 {
     [SerializeField]
-    private GameObject      towerPrefab;
+    private TowerTemplateSO towerTemplate;
     [SerializeField]
-    private int             towerBuildGold = 50;
+    private PlayerGold playerGold;
     [SerializeField]
-    private EnemySpawner    enemySpawner;
+    private EnemySpawner enemySpawner;
     [SerializeField]
-    private PlayerGold      playerGold;
+    private SystemTextViewer systemTextViewer;
 
-    public void SpawnTower(Transform tileTransform)
+    public void TrySpawnTower(Transform tileTransform)
     {
-        if ( towerBuildGold > playerGold.CurrentGold )
+        if ( towerTemplate.weapon[0].cost > playerGold.CurrentGold )
         {
+            systemTextViewer.PrintText(MESSAGE.MONEY);
             return;
         }
 
@@ -22,13 +23,14 @@ public class TowerSpawner : MonoBehaviour
 
         if ( tile.IsBuildTower == true )
         {
+            systemTextViewer.PrintText(MESSAGE.BUILD);
             return;
         }
 
         tile.IsBuildTower = true;
-        playerGold.CurrentGold -= towerBuildGold;
+        playerGold.CurrentGold -= towerTemplate.weapon[0].cost;
         Vector3 position = tileTransform.position + Vector3.back;
-        GameObject clone = Instantiate(towerPrefab, position, Quaternion.identity);
-        clone.GetComponent<TowerWeapon>().Setup(enemySpawner);
+        GameObject clone = Instantiate(towerTemplate.towerPrefab, position, Quaternion.identity);
+        clone.GetComponent<TowerWeapon>().Setup(enemySpawner, playerGold, tile);
     }
 }
