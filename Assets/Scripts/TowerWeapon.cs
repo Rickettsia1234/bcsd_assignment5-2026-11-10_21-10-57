@@ -6,26 +6,30 @@ public enum TowerState { SearchTarget = 0, AttackToTarget }
 public class TowerWeapon : MonoBehaviour
 {
     [SerializeField]
-    private GameObject projectilePrefab;
+    private GameObject      projectilePrefab;
     [SerializeField]
-    private Transform spawnPoint;
+    private Transform       spawnPoint;
     [SerializeField]
-    private float attackRate = 0.5f;
+    private float           attackRate = 0.5f;
     [SerializeField]
-    private float attackRange = 2.0f;
+    private float           attackRange = 2.0f;
     [SerializeField]
-    private float attackDamage = 1.0f;
-    [SerializeField]
-    private Transform targetTransform;
+    private float           attackDamage = 1;
 
-    private TowerState towerState = TowerState.SearchTarget;
-    private EnemySpawner enemySpawner;
+    private int             level = 1;
+    private TowerState      towerState = TowerState.SearchTarget;
+    private Transform       attackTarget = null;
+    private EnemySpawner    enemySpawner;
 
-    public float AttackRange => attackRange;
+    public float Damage => attackDamage;
+    public float Rate   => attackRate;
+    public float Range  => attackRange;
+    public int   Level  => level;
 
     public void Setup(EnemySpawner enemySpawner)
     {
         this.enemySpawner = enemySpawner;
+
         ChangeState(TowerState.SearchTarget);
     }
 
@@ -36,22 +40,38 @@ public class TowerWeapon : MonoBehaviour
         StartCoroutine(towerState.ToString());
     }
 
+    private void Update()
+    {
+        if ( attackTarget != null )
+        {
+            RotateToTarget();
+        }
+    }
+
+    private void RotateToTarget()
+    {
+        float dx = attackTarget.position.x - transform.position.x;
+        float dy = attackTarget.position.y - transform.position.y;
+        float degree = Mathf.Atan2(dy, dx) * Mathf.Rad2Deg;
+        transform.rotation = Quaternion.Euler(0, 0, degree);
+    }
+
     private IEnumerator SearchTarget()
     {
-        while (true)
+        while ( true )
         {
             float closestDistSqr = Mathf.Infinity;
-            for (int i = 0; i < enemySpawner.EnemyList.Count; ++i)
+            for ( int i = 0; i < enemySpawner.EnemyList.Count; ++ i )
             {
                 float distance = Vector3.Distance(enemySpawner.EnemyList[i].transform.position, transform.position);
-                if (distance <= attackRange && distance < closestDistSqr)
+                if ( distance <= attackRange && distance <= closestDistSqr )
                 {
                     closestDistSqr = distance;
-                    targetTransform = enemySpawner.EnemyList[i].transform;
+                    attackTarget = enemySpawner.EnemyList[i].transform;
                 }
             }
 
-            if (targetTransform != null)
+            if ( attackTarget != null )
             {
                 ChangeState(TowerState.AttackToTarget);
             }
@@ -62,23 +82,21 @@ public class TowerWeapon : MonoBehaviour
 
     private IEnumerator AttackToTarget()
     {
-        while (true)
+        while ( true )
         {
-            if (targetTransform == null)
+            if ( attackTarget == null )
             {
                 ChangeState(TowerState.SearchTarget);
                 break;
             }
 
-            float distance = Vector3.Distance(targetTransform.position, transform.position);
-            if (distance > attackRange)
+            float distance = Vector3.Distance(attackTarget.position, transform.position);
+            if ( distance > attackRange )
             {
-                targetTransform = null;
+                attackTarget = null;
                 ChangeState(TowerState.SearchTarget);
                 break;
             }
-
-            RotateToTarget();
 
             yield return new WaitForSeconds(attackRate);
 
@@ -86,16 +104,9 @@ public class TowerWeapon : MonoBehaviour
         }
     }
 
-    private void RotateToTarget()
-    {
-        Vector3 dx = targetTransform.position - transform.position;
-        float degree = Mathf.Atan2(dx.y, dx.x) * Mathf.Rad2Deg;
-        transform.rotation = Quaternion.Euler(0, 0, degree);
-    }
-
     private void SpawnProjectile()
     {
         GameObject clone = Instantiate(projectilePrefab, spawnPoint.position, Quaternion.identity);
-        clone.GetComponent<Projectile>().Setup(targetTransform, attackDamage);
+        clone.GetComponent<Projectile>().Setup(attackTarget, attackDamage);
     }
 }
