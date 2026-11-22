@@ -5,7 +5,7 @@ using System.Collections;
 public class TowerSpawner : MonoBehaviour
 {
     [SerializeField]
-    private TowerTemplateSO towerTemplate;
+    private TowerTemplateSO[] towerTemplate;
     [SerializeField]
     private PlayerGold playerGold;
     [SerializeField]
@@ -17,18 +17,21 @@ public class TowerSpawner : MonoBehaviour
 
     private bool isOnTowerButton = false;
     private GameObject followTowerClone = null;
+    private int towerType;
 
-    public void ReadyToSpawnTower()
+    public void ReadyToSpawnTower(int type)
     {
-        if (isOnTowerButton == true) return;
+        towerType = type;
 
-        if (towerTemplate.weapon[0].cost > playerGold.CurrentGold)
+        if ( isOnTowerButton == true ) return;
+
+        if ( towerTemplate[towerType].weapon[0].cost > playerGold.CurrentGold )
         {
             systemTextViewer.PrintText(MESSAGE.MONEY);
             return;
         }
 
-        followTowerClone = Instantiate(towerTemplate.followTowerPrefab);
+        followTowerClone = Instantiate(towerTemplate[towerType].followTowerPrefab);
         followTowerClone.GetComponent<ObjectFollowMousePosition>().Setup(objectDetector);
 
         isOnTowerButton = true;
@@ -38,38 +41,31 @@ public class TowerSpawner : MonoBehaviour
 
     public void TrySpawnTower(Transform tileTransform)
     {
-        if (isOnTowerButton == false) return;
+        if ( isOnTowerButton == false ) return;
 
         Tile tile = tileTransform.GetComponent<Tile>();
 
-        if (tile.IsBuildTower == true)
-        {
-            systemTextViewer.PrintText(MESSAGE.BUILD);
-            return;
-        }
+        if ( tile.IsBuildTower == true ) return;
 
         isOnTowerButton = false;
-
         tile.IsBuildTower = true;
 
-        playerGold.CurrentGold -= towerTemplate.weapon[0].cost;
+        playerGold.CurrentGold -= towerTemplate[towerType].weapon[0].cost;
 
         Vector3 position = tileTransform.position + Vector3.back;
-        GameObject clone = Instantiate(towerTemplate.towerPrefab, position, Quaternion.identity);
-
+        var clone = Instantiate(towerTemplate[towerType].towerPrefab, position, Quaternion.identity);
         clone.GetComponent<TowerWeapon>().Setup(enemySpawner, playerGold, tile);
 
         Destroy(followTowerClone);
-
         StopCoroutine(nameof(OnTowerCancelProcess));
     }
 
     private IEnumerator OnTowerCancelProcess()
     {
-        while (true)
+        while ( true )
         {
-            if (Keyboard.current.escapeKey.wasPressedThisFrame ||
-                Mouse.current.rightButton.wasPressedThisFrame)
+            if ( Keyboard.current.escapeKey.wasPressedThisFrame ||
+                 Mouse.current.rightButton.wasPressedThisFrame )
             {
                 isOnTowerButton = false;
                 Destroy(followTowerClone);

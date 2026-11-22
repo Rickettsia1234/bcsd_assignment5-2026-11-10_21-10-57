@@ -1,16 +1,30 @@
 using UnityEngine;
 using System.Collections;
 
-public enum WeaponState { SearchClosestTarget = 0, AttackToTarget }
+public enum WeaponType { Cannon = 0, Laser, }
+public enum WeaponState { SearchClosestTarget = 0, TryAttackCannon, TryAttackLaser, }
 
 public class TowerWeapon : MonoBehaviour
 {
+    [Header("Commons")]
     [SerializeField]
     private TowerTemplateSO towerTemplate;
     [SerializeField]
     private Transform spawnPoint;
     [SerializeField]
+    private WeaponType weaponType;
+
+    [Header("Cannon")]
+    [SerializeField]
     private GameObject projectilePrefab;
+
+    [Header("Laser")]
+    [SerializeField]
+    private LineRenderer lineRenderer;
+    [SerializeField]
+    private Transform hitEffect;
+    [SerializeField]
+    private LayerMask targetLayer;
 
     private EnemySpawner enemySpawner;
     private SpriteRenderer spriteRenderer;
@@ -34,6 +48,8 @@ public class TowerWeapon : MonoBehaviour
         this.enemySpawner = enemySpawner;
         this.playerGold = playerGold;
         this.ownerTile = ownerTile;
+
+        if ( weaponType == WeaponType.Laser ) DisableLaser();
 
         ChangeState(WeaponState.SearchClosestTarget);
     }
@@ -63,43 +79,32 @@ public class TowerWeapon : MonoBehaviour
 
     private IEnumerator SearchClosestTarget()
     {
-        float closestDistSqr = Mathf.Infinity;
-
         while ( true )
         {
-            for ( int i = 0; i < enemySpawner.EnemyList.Count; ++ i )
-            {
-                float distance = Vector3.Distance(enemySpawner.EnemyList[i].transform.position, transform.position);
-                if ( distance <= towerTemplate.weapon[level].range && distance <= closestDistSqr )
-                {
-                    closestDistSqr = distance;
-                    attackTarget = enemySpawner.EnemyList[i].transform;
-                }
-            }
+            attackTarget = FindClosestTarge();
 
             if ( attackTarget != null )
             {
-                ChangeState(WeaponState.AttackToTarget);
+                if ( weaponType == WeaponType.Cannon )
+                {
+                    ChangeState(WeaponState.TryAttackCannon);
+                }
+                else if ( weaponType == WeaponType.Laser )
+                {
+                    ChangeState(WeaponState.TryAttackLaser);
+                }
             }
 
             yield return null;
         }
     }
 
-    private IEnumerator AttackToTarget()
+    private IEnumerator TryAttackCannon()
     {
         while ( true )
         {
-            if ( attackTarget == null )
+            if ( IsPossibleToAttackTarget() == false )
             {
-                ChangeState(WeaponState.SearchClosestTarget);
-                break;
-            }
-
-            float distance = Vector3.Distance(attackTarget.position, transform.position);
-            if ( distance > towerTemplate.weapon[level].range )
-            {
-                attackTarget = null;
                 ChangeState(WeaponState.SearchClosestTarget);
                 break;
             }
@@ -107,6 +112,25 @@ public class TowerWeapon : MonoBehaviour
             yield return new WaitForSeconds(towerTemplate.weapon[level].rate);
 
             SpawnProjectile();
+        }
+    }
+
+    private IEnumerator TryAttackLaser()
+    {
+        EnableLaser();
+
+        while ( true )
+        {
+            if ( IsPossibleToAttackTarget() == false )
+            {
+                DisableLaser();
+                ChangeState(WeaponState.SearchClosestTarget);
+                break;
+            }
+
+            SpawnLaser();
+
+            yield return null;
         }
     }
 
@@ -127,6 +151,12 @@ public class TowerWeapon : MonoBehaviour
         spriteRenderer.sprite = TowerSprite;
         playerGold.CurrentGold -= towerTemplate.weapon[level].cost;
 
+        if ( weaponType == WeaponType.Laser )
+        {
+            lineRenderer.startWidth = 0.05f + level * 0.05f;
+            lineRenderer.endWidth = 0.05f;
+        }
+
         return true;
     }
 
@@ -135,5 +165,68 @@ public class TowerWeapon : MonoBehaviour
         playerGold.CurrentGold += towerTemplate.weapon[level].sell;
         ownerTile.IsBuildTower = false;
         Destroy(gameObject);
+    }
+
+    private Transform FindClosestTarge()
+    {
+        float closestDistSqr = Mathf.Infinity;
+
+        for ( int i = 0; i < enemySpawner.EnemyList.Count; ++ i )
+        {
+            float distance = Vector3.Distance(enemySpawner.EnemyList[i].transform.position, transform.position);
+            if ( distance <= towerTemplate.weapon[level].range && distance <= closestDistSqr )
+            {
+                closestDistSqr = distance;
+                attackTarget = enemySpawner.EnemyList[i].transform;
+            }
+        }
+
+        return attackTarget;
+    }
+
+    private bool IsPossibleToAttackTarget()
+    {
+        if ( attackTarget == null )
+        {
+            return false;
+        }
+
+        float distance = Vector3.Distance(attackTarget.position, transform.position);
+        if ( distance > towerTemplate.weapon[level].range )
+        {
+            attackTarget = null;
+            return false;
+        }
+
+        return true;
+    }
+
+    private void EnableLaser()
+    {
+        lineRenderer.gameObject.SetActive(true);
+        hitEffect.gameObject.SetActive(true);
+    }
+
+    private void DisableLaser()
+    {
+        lineRenderer.gameObject.SetActive(false);
+        hitEffect.gameObject.SetActive(false);
+    }
+
+    private void SpawnLaser()
+    {
+        Vector3 direction = (attackTarget.position - spawnPoint.position).normalized;
+        var hit = Physics2D.RaycastAll(spawnPoint.position, direction, towerTemplate.weapon[level].range, targetLayer);
+
+        for ( int i = 0; i < hit.Length; ++ i )
+        {
+            if ( hit[i].transform == attackTarget )
+            {
+                lineRenderer.SetPosition(0, spawnPoint.position);
+                lineRenderer.SetPosition(1, new Vector3(hit[i].point.x, hit[i].point.y, 0) + Vector3.back);
+                hitEffect.position = hit[i].point;
+                attackTarget.GetComponent<EnemyHP>().TakeDamage(towerTemplate.weapon[level].damage * Time.deltaTime);
+            }
+        }
     }
 }
