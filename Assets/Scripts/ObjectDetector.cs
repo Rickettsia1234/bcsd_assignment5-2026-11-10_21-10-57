@@ -10,10 +10,16 @@ public class ObjectDetector : MonoBehaviour
     private UIPopupTower uiPopupTower;
     private Camera mainCamera;
     private Vector2 screenPoint;
+    private bool isPointerOverUI;
 
     private void Awake()
     {
         mainCamera = Camera.main;
+    }
+
+    private void Update()
+    {
+        isPointerOverUI = EventSystem.current.IsPointerOverGameObject();
     }
 
     public Vector3 GetPointerWorldPosition()
@@ -32,7 +38,7 @@ public class ObjectDetector : MonoBehaviour
     public void OnClick(InputAction.CallbackContext context)
     {
         if (!context.performed) return;
-        if (EventSystem.current.IsPointerOverGameObject()) return;
+        if (isPointerOverUI) return;
 
         Ray ray = mainCamera.ScreenPointToRay(screenPoint);
 

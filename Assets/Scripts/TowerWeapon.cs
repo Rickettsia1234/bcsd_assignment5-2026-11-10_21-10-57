@@ -1,8 +1,8 @@
 using UnityEngine;
 using System.Collections;
 
-public enum WeaponType { Cannon = 0, Laser, }
-public enum WeaponState { SearchClosestTarget = 0, TryAttackCannon, TryAttackLaser, }
+public enum WeaponType { Cannon = 0, Laser, Slow }
+public enum WeaponState { SearchClosestTarget = 0, TryAttackCannon, TryAttackLaser }
 
 public class TowerWeapon : MonoBehaviour
 {
@@ -38,8 +38,10 @@ public class TowerWeapon : MonoBehaviour
     public float Damage => towerTemplate.weapon[level].damage;
     public float Rate => towerTemplate.weapon[level].rate;
     public float Range => towerTemplate.weapon[level].range;
+    public float Slow => towerTemplate.weapon[level].slow;
     public int Level => level + 1;
     public int MaxLevel => towerTemplate.weapon.Length;
+    public WeaponType WeaponType => weaponType;
 
     public void Setup(EnemySpawner enemySpawner, PlayerGold playerGold, Tile ownerTile)
     {
@@ -51,7 +53,10 @@ public class TowerWeapon : MonoBehaviour
 
         if ( weaponType == WeaponType.Laser ) DisableLaser();
 
-        ChangeState(WeaponState.SearchClosestTarget);
+        if ( weaponType == WeaponType.Cannon || weaponType == WeaponType.Laser )
+        {
+            ChangeState(WeaponState.SearchClosestTarget);
+        }
     }
 
     public void ChangeState(WeaponState newState)
@@ -81,7 +86,7 @@ public class TowerWeapon : MonoBehaviour
     {
         while ( true )
         {
-            attackTarget = FindClosestTarge();
+            attackTarget = FindClosestAttackTarget();
 
             if ( attackTarget != null )
             {
@@ -142,13 +147,13 @@ public class TowerWeapon : MonoBehaviour
 
     public bool Upgrade()
     {
-        if ( playerGold.CurrentGold < towerTemplate.weapon[level+1].cost )
+        if ( playerGold.CurrentGold < towerTemplate.weapon[level + 1].cost )
         {
             return false;
         }
 
         level ++;
-        spriteRenderer.sprite = TowerSprite;
+        spriteRenderer.sprite = towerTemplate.weapon[level].sprite;
         playerGold.CurrentGold -= towerTemplate.weapon[level].cost;
 
         if ( weaponType == WeaponType.Laser )
@@ -167,7 +172,7 @@ public class TowerWeapon : MonoBehaviour
         Destroy(gameObject);
     }
 
-    private Transform FindClosestTarge()
+    private Transform FindClosestAttackTarget()
     {
         float closestDistSqr = Mathf.Infinity;
 
@@ -216,7 +221,7 @@ public class TowerWeapon : MonoBehaviour
     private void SpawnLaser()
     {
         Vector3 direction = (attackTarget.position - spawnPoint.position).normalized;
-        var hit = Physics2D.RaycastAll(spawnPoint.position, direction, towerTemplate.weapon[level].range, targetLayer);
+        RaycastHit2D[] hit = Physics2D.RaycastAll(spawnPoint.position, direction, towerTemplate.weapon[level].range, targetLayer);
 
         for ( int i = 0; i < hit.Length; ++ i )
         {
